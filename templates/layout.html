@@ -3,8 +3,18 @@
         <head>
             <title>{% block title %} {% endblock %}</title>
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-warning" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
         </head>
         <body>
-            {% block body %} {% endblock %}
+             <div class="container-fluid">
+            {% block body %}
+            {% endblock %}
+                </div>
         </body>
     </html>
