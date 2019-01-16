@@ -29,28 +29,22 @@ def index():
 @app.route("/register", methods = ["GET", "POST"])
 def register():
 
-    error = 0
-
     if request.method == "POST":
 
         # check for empty inputs
         if not request.form.get("email"):
             flash("Enter your email address")
-            error += 1
         elif not request.form.get("password"):
             flash("Enter your password")
-            error += 1
         elif not request.form.get("confirmation"):
             flash("Confirm password")
-            error += 1
 
         #check if password
         elif not request.form.get("password") == request.form.get("confirmation"):
             flash("Confirmation does not match")
-            error += 1
 
         # check if email already registred
-        if error == 0:
+        else:
             check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchone()
 
             # if not registred add to dababase
@@ -78,12 +72,14 @@ def login():
         else:
             #check if user is in database and password is right
             check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchone()
-            if check is not None and not check_password_hash(check["hash"], request.form.get("password")):
+            if (check is not None) and (check_password_hash(check['hash'], request.form.get("password"))):
 
                 # remember which user is logged in
                 session["user_id"] = check['id']
 
                 return redirect("/")
+            else:
+                flash("Password or user is wrong!")
 
     return render_template("login.html")
 
