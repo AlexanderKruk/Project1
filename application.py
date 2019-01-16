@@ -28,7 +28,9 @@ def index():
 
 @app.route("/register", methods = ["GET", "POST"])
 def register():
+
     error = 0
+
     if request.method == "POST":
 
         # check for empty inputs
@@ -49,7 +51,7 @@ def register():
 
         # check if email already registred
         if error == 0:
-            check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchall()
+            check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchone()
 
             # if not registred add to dababase
             if check is None:
@@ -61,9 +63,27 @@ def register():
 
     return render_template("register.html")
 
-@app.route("/login")
+@app.route("/login", methods = ["GET", "POST"])
 def login():
+
     session.clear();
+
+    if request.method == "POST":
+
+        # check input if not empty email and password
+        if not request.form.get("email"):
+            flash("Enter email")
+        elif not request.form.get("password"):
+            flash("Enter password")
+        else:
+            #check if user is in database and password is right
+            check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchone()
+            if check is not None and not check_password_hash(check["hash"], request.form.get("password")):
+
+                # remember which user is logged in
+                session["user_id"] = check['id']
+
+                return redirect("/")
 
     return render_template("login.html")
 
