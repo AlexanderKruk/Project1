@@ -1,9 +1,10 @@
 import os
 
-from flask import Flask, session, render_template
+from flask import Flask, session, render_template, redirect, request
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 
@@ -24,3 +25,21 @@ db = scoped_session(sessionmaker(bind=engine))
 @app.route("/")
 def index():
     return render_template("index.html")
+
+@app.route("/login")
+def login():
+
+    return render_template("login.html")
+
+@app.route("/register")
+def register():
+
+    return render_template("register.html")
+
+# logout from session
+@app.route("/logout")
+def logout():
+
+    session.clean();
+
+    return redirect("/")
