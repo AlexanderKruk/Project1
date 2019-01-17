@@ -1,4 +1,9 @@
 {% extends "layout.html" %}
 
 {% block body %}
+<ul>
+    {% for item in search_result %}
+    <li>{{ item.isbn }}, {{ item.title }}, {{ item.author }}, {{ item.year}}</li>
+    {% endfor %}
+</ul>
 {% endblock %}
