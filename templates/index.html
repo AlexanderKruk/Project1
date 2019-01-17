@@ -3,7 +3,7 @@
 {% block body %}
 <ul>
     {% for item in search_result %}
-    <li>{{ item.isbn }}, {{ item.title }}, {{ item.author }}, {{ item.year}}</li>
+    <li>{{ item.isbn }},<a href="{{ url_for('book', book_id = item.id) }}">{{ item.title }}</a>, {{ item.author }}, {{ item.year}}</li>
     {% endfor %}
 </ul>
 {% endblock %}

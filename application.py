@@ -26,12 +26,27 @@ db = scoped_session(sessionmaker(bind=engine))
 def index():
     if request.method == "POST":
 
+        # if search not empty
         if request.form.get("search"):
             search = request.form.get("search")
+
+            # get search result from database
             search_result = db.execute("SELECT * FROM books WHERE isbn LIKE :search OR title LIKE :search OR author LIKE :search", {"search": '%' + search + '%'}).fetchall()
             return render_template("index.html", search_result=search_result)
     else:
         return render_template("index.html")
+
+@app.route("/book/<int:book_id>")
+def book(book_id):
+
+    # check book info
+    book_info = db.execute("SELECT * FROM books WHERE id = :id",{"id": book_id}).fetchone()
+
+    # if book database not have book with this id
+    if book_info is None:
+        return redirect("/")
+
+    return render_template("book.html", book_info=book_info)
 
 @app.route("/register", methods = ["GET", "POST"])
 def register():
