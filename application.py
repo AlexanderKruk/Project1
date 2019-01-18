@@ -1,5 +1,5 @@
 import os
-
+import requests
 
 from flask import Flask, session, render_template, redirect, request, flash, url_for
 from flask_session import Session
@@ -49,6 +49,12 @@ def book(book_id):
         # if book database not have book with this id
         if book_info is None:
             return redirect("/")
+        else:
+
+            # get info from goodreads by api
+            res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": book_info.isbn})
+            res = res.json()
+
 
     # add or rewrite review
     if request.method == "POST":
@@ -72,9 +78,9 @@ def book(book_id):
                             {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             db.commit()
 
-        return redirect(url_for('book', book_id=book_id))
+        return redirect(url_for('book', book_id=book_id, goodreads=res))
 
-    return render_template("book.html", book_info=book_info)
+    return render_template("book.html", book_info=book_info, goodreads=res)
 
 # register page
 @app.route("/register", methods = ["GET", "POST"])
@@ -100,7 +106,7 @@ def register():
 
             # if not registred add to dababase
             if check is None:
-                insert = db.execute("INSERT INTO users (email,hash) VALUES (:email,:pass_hash)", {"email":request.form.get("email"), "pass_hash":generate_password_hash(request.form.get("password"))})
+                db.execute("INSERT INTO users (email,hash) VALUES (:email,:pass_hash)", {"email":request.form.get("email"), "pass_hash":generate_password_hash(request.form.get("password"))})
                 db.commit()
                 return redirect("/")
             else:
