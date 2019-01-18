@@ -58,9 +58,13 @@ def book(book_id):
             # get info from database books
             goodreads_rating = db.execute("SELECT review_count, average_score FROM books WHERE id = :id", {"id": book_id}).fetchone()
 
+        reviews = db.execute("SELECT * FROM book_review WHERE book_id = :book_id",{"book_id": book_id}).fetchall()
+
 
     # add or rewrite review
     if request.method == "POST":
+
+        # check if textarea and radio buttons is empty
         if not request.form.get("textreview"):
             flash("Write review")
         elif not request.form.get("rating"):
@@ -68,24 +72,24 @@ def book(book_id):
         else:
 
             # check if review allready exist
-            check = db.execute("SELECT * FROM book_review WHERE users_id = :user_id AND books_id = :books_id",
-                                {"user_id": session["user_id"], "books_id": book_id}).fetchone()
+            check = db.execute("SELECT * FROM book_review WHERE user_id = :user_id AND book_id = :book_id",
+                                {"user_id": session["user_id"], "book_id": book_id}).fetchone()
 
             # if review not exist add
             if check is None:
-                db.execute("INSERT INTO book_review (books_id, users_id, review, rating) VALUES (:books_id, :users_id, :review, :rating)",
-                            {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+                db.execute("INSERT INTO book_review (book_id, user_id, review, rating) VALUES (:book_id, :user_id, :review, :rating)",
+                            {"book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             # if review exist update
             else:
-                db.execute("UPDATE book_review SET review = :review, rating = :rating WHERE users_id = :users_id AND books_id = :books_id",
-                            {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+                db.execute("UPDATE book_review SET review = :review, rating = :rating WHERE user_id = :user_id AND book_id = :book_id",
+                            {"book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             db.commit()
 
-        return redirect(url_for('book', book_id=book_id, goodreads=goodreads_rating))
+        return redirect(url_for('book', book_id=book_id))
 
-    return render_template("book.html", book_info=book_info, goodreads=goodreads_rating)
+    return render_template("book.html", book_info=book_info, goodreads=goodreads_rating, reviews=reviews)
 
-
+# read ration info from goodreads
 def goodreads(isbn):
      res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": isbn})
      res_json = res.json()
