@@ -51,9 +51,16 @@ def book(book_id):
             return redirect("/")
         else:
 
-            # get info from goodreads by api
-            res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": book_info.isbn})
-            res = res.json()
+            # get info from goodreads by api and record in database books
+            if (book_info.review_count == 0) and (book_info.average_score == 0):
+                res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": book_info.isbn})
+                res_json = res.json()
+                db.execute("UPDATE books SET review_count = :review_count, average_score = :average_score WHERE id = :id",
+                            {"review_count": res_json['books'][0]['work_ratings_count'], "average_score": res_json['books'][0]['average_rating'], "id" : book_id})
+                db.commit()
+
+            # get info from database books
+            goodreads_rating = db.execute("SELECT review_count, average_score FROM books WHERE id = :id", {"id": book_id}).fetchone()
 
 
     # add or rewrite review
@@ -78,9 +85,9 @@ def book(book_id):
                             {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             db.commit()
 
-        return redirect(url_for('book', book_id=book_id, goodreads=res))
+        return redirect(url_for('book', book_id=book_id, goodreads=goodreads_rating))
 
-    return render_template("book.html", book_info=book_info, goodreads=res)
+    return render_template("book.html", book_info=book_info, goodreads=goodreads_rating)
 
 # register page
 @app.route("/register", methods = ["GET", "POST"])
@@ -146,3 +153,7 @@ def login():
 def logout():
     session.clear();
     return redirect("/")
+
+@app.route("/api/<int:isbn>")
+def api(isbn):
+    pass
