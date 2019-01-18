@@ -1,6 +1,7 @@
 import os
 
-from flask import Flask, session, render_template, redirect, request, flash
+
+from flask import Flask, session, render_template, redirect, request, flash, url_for
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -21,7 +22,7 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-
+# main page
 @app.route("/", methods = ["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -36,18 +37,46 @@ def index():
     else:
         return render_template("index.html")
 
-@app.route("/book/<int:book_id>")
+
+# book page
+@app.route("/book/<int:book_id>", methods = ["GET","POST"])
 def book(book_id):
 
-    # check book info
-    book_info = db.execute("SELECT * FROM books WHERE id = :id",{"id": book_id}).fetchone()
+    if request.method == "GET":
+        # check book info
+        book_info = db.execute("SELECT * FROM books WHERE id = :id",{"id": book_id}).fetchone()
 
-    # if book database not have book with this id
-    if book_info is None:
-        return redirect("/")
+        # if book database not have book with this id
+        if book_info is None:
+            return redirect("/")
+
+    # add or rewrite review
+    if request.method == "POST":
+        if not request.form.get("textreview"):
+            flash("Write review")
+        elif not request.form.get("rating"):
+            flash("Set rating")
+        else:
+
+            # check if review allready exist
+            check = db.execute("SELECT * FROM book_review WHERE users_id = :user_id AND books_id = :books_id",
+                                {"user_id": session["user_id"], "books_id": book_id}).fetchone()
+
+            # if review not exist add
+            if check is None:
+                db.execute("INSERT INTO book_review (books_id, users_id, review, rating) VALUES (:books_id, :users_id, :review, :rating)",
+                            {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+            # if review exist update
+            else:
+                db.execute("UPDATE book_review SET review = :review, rating = :rating WHERE users_id = :users_id AND books_id = :books_id",
+                            {"books_id": book_id, "users_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+            db.commit()
+
+        return redirect(url_for('book', book_id=book_id))
 
     return render_template("book.html", book_info=book_info)
 
+# register page
 @app.route("/register", methods = ["GET", "POST"])
 def register():
 
@@ -79,6 +108,7 @@ def register():
 
     return render_template("register.html")
 
+# login page
 @app.route("/login", methods = ["GET", "POST"])
 def login():
 
@@ -105,7 +135,7 @@ def login():
 
     return render_template("login.html")
 
-# logout from session
+# logout function
 @app.route("/logout")
 def logout():
     session.clear();
