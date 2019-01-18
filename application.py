@@ -1,13 +1,16 @@
 import os
 import requests
 
-from flask import Flask, session, render_template, redirect, request, flash, url_for
+from flask import Flask, session, render_template, redirect, request, flash, url_for, abort, jsonify
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
+
+# json sorting off
+app.config['JSON_SORT_KEYS'] = False
 
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
@@ -50,14 +53,7 @@ def book(book_id):
         if book_info is None:
             return redirect("/")
         else:
-
-            # get info from goodreads by api and record in database books
-            if (book_info.review_count == 0) and (book_info.average_score == 0):
-                res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": book_info.isbn})
-                res_json = res.json()
-                db.execute("UPDATE books SET review_count = :review_count, average_score = :average_score WHERE id = :id",
-                            {"review_count": res_json['books'][0]['work_ratings_count'], "average_score": res_json['books'][0]['average_rating'], "id" : book_id})
-                db.commit()
+            goodreads(book_info.isbn)
 
             # get info from database books
             goodreads_rating = db.execute("SELECT review_count, average_score FROM books WHERE id = :id", {"id": book_id}).fetchone()
@@ -88,6 +84,17 @@ def book(book_id):
         return redirect(url_for('book', book_id=book_id, goodreads=goodreads_rating))
 
     return render_template("book.html", book_info=book_info, goodreads=goodreads_rating)
+
+
+def goodreads(isbn):
+     res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": isbn})
+     res_json = res.json()
+     db.execute("UPDATE books SET review_count = :review_count, average_score = :average_score WHERE isbn = :isbn",
+     {"review_count": res_json['books'][0]['work_ratings_count'], "average_score": res_json['books'][0]['average_rating'], "isbn" : isbn})
+     db.commit()
+
+
+
 
 # register page
 @app.route("/register", methods = ["GET", "POST"])
@@ -154,6 +161,11 @@ def logout():
     session.clear();
     return redirect("/")
 
-@app.route("/api/<int:isbn>")
+@app.route("/api/<isbn>")
 def api(isbn):
-    pass
+    goodreads(isbn)
+    res = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn" : isbn}).fetchone()
+    if res is not None:
+        return jsonify(title = res.title, author = res.author, year = res.year, isbn = res.isbn, review_count = res.review_count, average_score = res.average_score)
+    else:
+        abort(404)
