@@ -25,8 +25,8 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
-# main page
-@app.route("/", methods = ["GET", "POST"])
+
+@app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
 
@@ -35,19 +35,20 @@ def index():
             search = request.form.get("search")
 
             # get search result from database
-            search_result = db.execute("SELECT * FROM books WHERE isbn LIKE :search OR title LIKE :search OR author LIKE :search", {"search": '%' + search + '%'}).fetchall()
+            search_result = db.execute(
+                "SELECT * FROM books WHERE isbn LIKE :search OR title LIKE :search OR author LIKE :search", {"search": '%' + search + '%'}).fetchall()
             return render_template("index.html", search_result=search_result)
     else:
         return render_template("index.html")
 
 
 # book page
-@app.route("/book/<int:book_id>", methods = ["GET","POST"])
+@app.route("/book/<int:book_id>", methods=["GET", "POST"])
 def book(book_id):
 
     if request.method == "GET":
         # check book info
-        book_info = db.execute("SELECT * FROM books WHERE id = :id",{"id": book_id}).fetchone()
+        book_info = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
 
         # if book database not have book with this id
         if book_info is None:
@@ -56,10 +57,10 @@ def book(book_id):
             goodreads(book_info.isbn)
 
             # get info from database books
-            goodreads_rating = db.execute("SELECT review_count, average_score FROM books WHERE id = :id", {"id": book_id}).fetchone()
+            goodreads_rating = db.execute("SELECT review_count, average_score FROM books WHERE id = :id", {
+                "id": book_id}).fetchone()
 
-        reviews = db.execute("SELECT * FROM book_review WHERE book_id = :book_id",{"book_id": book_id}).fetchall()
-
+        reviews = db.execute("SELECT * FROM book_review WHERE book_id = :book_id", {"book_id": book_id}).fetchall()
 
     # add or rewrite review
     if request.method == "POST":
@@ -72,36 +73,35 @@ def book(book_id):
         else:
 
             # check if review allready exist
-            check = db.execute("SELECT * FROM book_review WHERE user_id = :user_id AND book_id = :book_id",
-                                {"user_id": session["user_id"], "book_id": book_id}).fetchone()
+            check = db.execute("SELECT * FROM book_review WHERE user_id = :user_id AND book_id = :book_id", {
+                "user_id": session["user_id"], "book_id": book_id}).fetchone()
 
             # if review not exist add
             if check is None:
-                db.execute("INSERT INTO book_review (book_id, user_id, review, rating) VALUES (:book_id, :user_id, :review, :rating)",
-                            {"book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+                db.execute("INSERT INTO book_review (book_id, user_id, review, rating) VALUES (:book_id, :user_id, :review, :rating)", {
+                    "book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             # if review exist update
             else:
-                db.execute("UPDATE book_review SET review = :review, rating = :rating WHERE user_id = :user_id AND book_id = :book_id",
-                            {"book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
+                db.execute("UPDATE book_review SET review = :review, rating = :rating WHERE user_id = :user_id AND book_id = :book_id", {
+                    "book_id": book_id, "user_id": session["user_id"], "review": request.form.get("textreview"), "rating": request.form.get("rating")})
             db.commit()
 
         return redirect(url_for('book', book_id=book_id))
 
     return render_template("book.html", book_info=book_info, goodreads=goodreads_rating, reviews=reviews)
 
+
 # read ration info from goodreads
 def goodreads(isbn):
-     res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": isbn})
-     res_json = res.json()
-     db.execute("UPDATE books SET review_count = :review_count, average_score = :average_score WHERE isbn = :isbn",
-     {"review_count": res_json['books'][0]['work_ratings_count'], "average_score": res_json['books'][0]['average_rating'], "isbn" : isbn})
-     db.commit()
-
-
+    res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "wyUAf9Zan5pPcljtfThxGg", "isbns": isbn})
+    res_json = res.json()
+    db.execute("UPDATE books SET review_count = :review_count, average_score = :average_score WHERE isbn = :isbn", {
+        "review_count": res_json['books'][0]['work_ratings_count'], "average_score": res_json['books'][0]['average_rating'], "isbn": isbn})
+    db.commit()
 
 
 # register page
-@app.route("/register", methods = ["GET", "POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
 
     if request.method == "POST":
@@ -114,7 +114,7 @@ def register():
         elif not request.form.get("confirmation"):
             flash("Confirm password")
 
-        #check if password
+        # check if password
         elif not request.form.get("password") == request.form.get("confirmation"):
             flash("Confirmation does not match")
 
@@ -124,7 +124,8 @@ def register():
 
             # if not registred add to dababase
             if check is None:
-                db.execute("INSERT INTO users (email,hash) VALUES (:email,:pass_hash)", {"email":request.form.get("email"), "pass_hash":generate_password_hash(request.form.get("password"))})
+                db.execute("INSERT INTO users (email,hash) VALUES (:email,:pass_hash)", {"email": request.form.get(
+                    "email"), "pass_hash": generate_password_hash(request.form.get("password"))})
                 db.commit()
                 return redirect("/")
             else:
@@ -132,11 +133,12 @@ def register():
 
     return render_template("register.html")
 
+
 # login page
-@app.route("/login", methods = ["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
 
-    session.clear();
+    session.clear()
 
     if request.method == "POST":
 
@@ -146,7 +148,7 @@ def login():
         elif not request.form.get("password"):
             flash("Enter password")
         else:
-            #check if user is in database and password is right
+            # check if user is in database and password is right
             check = db.execute("SELECT * FROM users WHERE email = :email", {"email": request.form.get("email")}).fetchone()
             if (check is not None) and (check_password_hash(check['hash'], request.form.get("password"))):
 
@@ -159,17 +161,19 @@ def login():
 
     return render_template("login.html")
 
+
 # logout function
 @app.route("/logout")
 def logout():
-    session.clear();
+    session.clear()
     return redirect("/")
+
 
 @app.route("/api/<isbn>")
 def api(isbn):
     goodreads(isbn)
-    res = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn" : isbn}).fetchone()
+    res = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).fetchone()
     if res is not None:
-        return jsonify(title = res.title, author = res.author, year = res.year, isbn = res.isbn, review_count = res.review_count, average_score = res.average_score)
+        return jsonify(title=res.title, author=res.author, year=res.year, isbn=res.isbn, review_count=res.review_count, average_score=res.average_score)
     else:
         abort(404)
